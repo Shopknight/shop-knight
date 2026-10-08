@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SHOP KNIGHT | سفارش سکه</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:20px;font-family:Tahoma,Arial,sans-serif;background:#050505;color:#fff;position:relative;min-height:100vh}
+body:before{content:"";position:fixed;inset:-50%;pointer-events:none;background:linear-gradient(120deg,transparent 42%,rgba(255,190,0,.12) 43%,rgba(255,215,70,.30) 44%,transparent 45%,transparent 53%,rgba(255,190,0,.08) 54%,rgba(255,215,70,.22) 55%,transparent 56%);transform:rotate(-8deg)}
+.box{position:relative;z-index:1;max-width:600px;margin:25px auto;padding:24px;background:rgba(15,15,15,.94);border:1px solid #8d6d16;border-radius:20px;box-shadow:0 10px 35px #000}
+h1{text-align:center;margin:0 0 8px;color:#ffd447;text-shadow:0 0 16px #d6a63a}
+.sub{text-align:center;color:#bbb;margin-bottom:25px}
+label{display:block;margin:15px 0 7px;font-weight:bold}
+input,select,button{width:100%;padding:13px;border-radius:11px;border:1px solid #444;background:#202020;color:#fff;font-size:15px}
+input:focus,select:focus{outline:none;border-color:#ffd447}
+button{margin-top:20px;background:linear-gradient(90deg,#b8860b,#ffd447,#b8860b);color:#111;border:0;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.6}
+small{display:block;margin-top:7px;color:#999;line-height:1.7}
+.msg{display:none;margin-top:16px;padding:13px;border-radius:11px;line-height:1.8;white-space:pre-line}
+.ok{display:block;background:#153d25;color:#b9ffd0}
+.err{display:block;background:#4a1919;color:#ffd0d0}
+.pay{margin:18px 0;padding:15px;border:1px solid #725d13;border-radius:13px;text-align:center}
+.pay b{color:#ffd447}
+.links{text-align:center;margin-top:18px}
+.links a{display:inline-block;margin:5px;padding:9px 12px;border:1px solid #725d13;border-radius:9px;color:#ffd447;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="box">
+<h1>👑 SHOP KNIGHT ⚔️</h1>
+<p class="sub">ثبت سفارش سکه Animal Rush</p>
+
+<div class="pay">
+<div>💳 شماره کارت</div>
+<strong dir="ltr">6219 8618 5106 5564</strong>
+<div>به نام: <b>شایان کامران</b></div>
+</div>
+
+<form id="orderForm">
+<label for="coins">بسته سکه</label>
+<select id="coins" required>
+<option value="1000" data-price="6000">1,000 سکه — 6,000 تومان</option>
+<option value="5000" data-price="30000">5,000 سکه — 30,000 تومان</option>
+<option value="10000" data-price="60000">10,000 سکه — 60,000 تومان</option>
+<option value="20000" data-price="120000">20,000 سکه — 120,000 تومان</option>
+<option value="50000" data-price="300000">50,000 سکه — 300,000 تومان</option>
+<option value="100000" data-price="600000">100,000 سکه — 600,000 تومان</option>
+<option value="200000" data-price="1200000">200,000 سکه — 1,200,000 تومان</option>
+<option value="500000" data-price="3000000">500,000 سکه — 3,000,000 تومان</option>
+<option value="1000000" data-price="6000000">1,000,000 سکه — 6,000,000 تومان</option>
+</select>
+
+<label for="player_id">شناسه / ID در Animal Rush *</label>
+<input id="player_id" required placeholder="مثلاً 123456789">
+
+<label for="name">نام (اختیاری)</label>
+<input id="name" placeholder="نام شما">
+
+<label for="contact">راه ارتباطی (اختیاری)</label>
+<input id="contact" placeholder="آیدی یا شماره تماس">
+
+<label for="receipt">تصویر رسید پرداخت *</label>
+<input id="receipt" type="file" accept="image/*" required>
+<small>فقط تصویر رسید. حداکثر حجم: ۱۰ مگابایت</small>
+
+<button id="submitBtn" type="submit">ثبت سفارش 👑</button>
+<div id="msg" class="msg"></div>
+</form>
+
+<div class="links">
+<a href="https://rubika.ir/Shop___knight" target="_blank">کانال اصلی</a>
+<a href="https://rubika.ir/rezayat__knight" target="_blank">رضایت مشتریان</a>
+</div>
+</div>
+
+<script>
+const SUPABASE_URL="https://htwtlxnvozlxtwqvycxp.supabase.co";
+const SUPABASE_KEY="sb_publishable_y8D2hzgAq-PEihWY-9qDmg_Xoj2A30o";
+
+const form=document.getElementById("orderForm");
+const msg=document.getElementById("msg");
+const btn=document.getElementById("submitBtn");
+
+function showMessage(text,ok){
+  msg.textContent=text;
+  msg.className="msg "+(ok?"ok":"err");
+}
+
+form.addEventListener("submit",async e=>{
+  e.preventDefault();
+  btn.disabled=true;
+  btn.textContent="در حال ثبت سفارش...";
+
+  try{
+    const coins=document.getElementById("coins");
+    const selected=coins.options[coins.selectedIndex];
+    const file=document.getElementById("receipt").files[0];
+
+    if(!file) throw new Error("لطفاً تصویر رسید را انتخاب کنید.");
+    if(!file.type.startsWith("image/")) throw new Error("فایل رسید باید تصویر باشد.");
+    if(file.size>10*1024*1024) throw new Error("حجم تصویر نباید بیشتر از ۱۰ مگابایت باشد.");
+
+    const orderId=crypto.randomUUID();
+    const ext=(file.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"")||"jpg";
+    const receiptPath=`orders/${orderId}.${ext}`;
+
+    let response=await fetch(
+      `${SUPABASE_URL}/storage/v1/object/receipts/${receiptPath}`,
+      {
+        method:"POST",
+        headers:{
+          apikey:SUPABASE_KEY,
+          Authorization:`Bearer ${SUPABASE_KEY}`,
+          "Content-Type":file.type,
+          "x-upsert":"false"
+        },
+        body:file
+      }
+    );
+
+    if(!response.ok){
+      const t=await response.text();
+      throw new Error("آپلود رسید انجام نشد.\n"+t);
+    }
+
+    const orderData={
+      id:orderId,
+      player_id:document.getElementById("player_id").value.trim(),
+      coins:Number(selected.value),
+      price:Number(selected.dataset.price),
+      name:document.getElementById("name").value.trim()||null,
+      contact:document.getElementById("contact").value.trim()||null,
+      status:"در انتظار",
+      receipt_path:receiptPath
+    };
+
+    response=await fetch(`${SUPABASE_URL}/rest/v1/orders`,{
+      method:"POST",
+      headers:{
+        apikey:SUPABASE_KEY,
+        Authorization:`Bearer ${SUPABASE_KEY}`,
+        "Content-Type":"application/json",
+        Prefer:"return=minimal"
+      },
+      body:JSON.stringify(orderData)
+    });
+
+    if(!response.ok){
+      const t=await response.text();
+      throw new Error("ثبت سفارش در پایگاه‌داده انجام نشد.\n"+t);
+    }
+
+    showMessage("✅ سفارش با موفقیت ثبت شد.\nکد سفارش: "+orderId+"\nرسید پرداخت هم ارسال شد.",true);
+    form.reset();
+  }catch(err){
+    console.error(err);
+    showMessage("❌ "+(err.message||"خطای نامشخص"),false);
+  }finally{
+    btn.disabled=false;
+    btn.textContent="ثبت سفارش 👑";
+  }
+});
+</script>
+</body>
+</html>
